@@ -8,7 +8,7 @@ This package contains a component - `RefreshableScrollView`  - that enables this
 
 Check out [this article](https://swiftuirecipes.com/blog/pull-to-refresh-with-swiftui-scrollview) for in-depth description of the component and its code. Check out [SwiftUIRecipes.com](https://swiftuirecipes.com) for more SwiftUI recipes!
 
-#### Sample usage
+### Sample usage
 
 ```swift
 struct TestView: View {
@@ -33,6 +33,6 @@ struct TestView: View {
 }
 ```
 
-#### Installation
+### Installation
 
-This component is distrubuted as a **Swift package**. Check out the [package specs here](https://github.com/globulus/swiftui-pull-to-refresh/blob/main/SwiftUIPullToRefresh/Package.swift).
+This component is distrubuted as a **Swift package**. 
