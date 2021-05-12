@@ -66,7 +66,7 @@ public struct RefreshableScrollView<Content: View>: View {
   @State private var state = RefreshState.waiting // the current state
 
   // We use a custom constructor to allow for usage of a @ViewBuilder for the content
-  init(onRefresh: @escaping OnRefresh, @ViewBuilder content: () -> Content) {
+  public init(onRefresh: @escaping OnRefresh, @ViewBuilder content: () -> Content) {
     self.onRefresh = onRefresh
     self.content = content()
   }
