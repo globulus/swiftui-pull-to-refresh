@@ -73,7 +73,7 @@ public struct RefreshableScrollView<Content: View>: View {
 
   public var body: some View {
     // The root view is a regular ScrollView
-    ScrollView {
+    ScrollView(.vertical, showsIndicators: false) {
       // The ZStack allows us to position the PositionIndicator,
       // the content and the loading view, all on top of each other.
       ZStack(alignment: .top) {
