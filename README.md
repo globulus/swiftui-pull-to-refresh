@@ -2,7 +2,7 @@
 
 Pull to refresh is a common UI pattern, supported in UIKit via UIRefreshControl. (Un)surprisingly, it's also unavailable in SwiftUI prior to version 3, and even then [it's a bit lackluster](https://swiftuirecipes.com/blog/pull-to-refresh-with-swiftui-scrollview#drawbacks).
 
-This package contains a component - `RefreshableScrollView`  - that enables this functionality with **any `ScrollView **. It also **doesn't rely on `UIViewRepresentable`**, and works with **any iOS version**. The end result looks like this:
+This package contains a component - `RefreshableScrollView`  - that enables this functionality with **any `ScrollView`**. It also **doesn't rely on `UIViewRepresentable`**, and works with **any iOS version**. The end result looks like this:
 
 ![in action](https://swiftuirecipes.com/user/pages/01.blog/pull-to-refresh-with-swiftui-scrollview/ezgif-4-bf1673b185d4.gif)
 
