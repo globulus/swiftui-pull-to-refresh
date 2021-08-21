@@ -55,20 +55,28 @@ private let THRESHOLD: CGFloat = 50
 // 1. waiting for a scroll to happen
 // 2. has been primed by pulling down beyond THRESHOLD
 // 3. is doing the refreshing.
-private enum RefreshState {
+public enum RefreshState {
   case waiting, primed, loading
 }
 
-public struct RefreshableScrollView<Content: View>: View {
+// ViewBuilder for the custom progress View, that may render itself
+// based on the current RefreshState.
+public typealias RefreshProgressBuilder<Progress: View> = (RefreshState) -> Progress
+
+public struct RefreshableScrollView<Progress, Content>: View where Progress: View, Content: View {
   let onRefresh: OnRefresh // the refreshing action
-  let content: Content // the ScrollView content
+  let progress: RefreshProgressBuilder<Progress> // custom progress view
+  let content: () -> Content // the ScrollView content
 
   @State private var state = RefreshState.waiting // the current state
 
   // We use a custom constructor to allow for usage of a @ViewBuilder for the content
-  public init(onRefresh: @escaping OnRefresh, @ViewBuilder content: () -> Content) {
+  public init(onRefresh: @escaping OnRefresh,
+              @ViewBuilder progress: @escaping RefreshProgressBuilder<Progress>,
+              @ViewBuilder content: @escaping () -> Content) {
     self.onRefresh = onRefresh
-    self.content = content()
+    self.progress = progress
+    self.content = content
   }
 
   public var body: some View {
@@ -84,7 +92,7 @@ public struct RefreshableScrollView<Content: View>: View {
 
          // Your ScrollView content. If we're loading, we want
          // to keep it below the loading view, hence the alignmentGuide.
-         content
+         content()
            .alignmentGuide(.top, computeValue: { _ in
              (state == .loading) ? -THRESHOLD : 0
             })
@@ -94,9 +102,7 @@ public struct RefreshableScrollView<Content: View>: View {
             Rectangle()
               .foregroundColor(.white)
               .frame(height: THRESHOLD)
-            ActivityIndicator(isAnimating: state == .loading) {
-              $0.hidesWhenStopped = false
-            }
+            progress(state)
           }.offset(y: (state == .loading) ? 0 : -THRESHOLD)
         }
       }
@@ -136,7 +142,23 @@ public struct RefreshableScrollView<Content: View>: View {
   }
 }
 
-private struct ActivityIndicator: UIViewRepresentable {
+// Extension that uses default RefreshActivityIndicator so that you don't have to
+// specify it every time.
+public extension RefreshableScrollView where Progress == RefreshActivityIndicator {
+    init(onRefresh: @escaping OnRefresh,
+         @ViewBuilder content: @escaping () -> Content) {
+        self.init(onRefresh: onRefresh,
+                  progress: { state in
+                    RefreshActivityIndicator(isAnimating: state == .loading) {
+                        $0.hidesWhenStopped = false
+                    }
+                 },
+                 content: content)
+    }
+}
+
+// Wraps a UIActivityIndicatorView as a loading spinner that works on all SwiftUI versions.
+public struct RefreshActivityIndicator: UIViewRepresentable {
   public typealias UIView = UIActivityIndicatorView
   public var isAnimating: Bool = true
   public var configuration = { (indicator: UIView) in }
@@ -158,4 +180,183 @@ private struct ActivityIndicator: UIViewRepresentable {
   }
 }
 
+// Allows using RefreshableScrollView with an async block.
+@available(iOS 15.0, *)
+public extension RefreshableScrollView {
+    init(action: @escaping @Sendable () async -> Void,
+         @ViewBuilder progress: @escaping RefreshProgressBuilder<Progress>,
+         @ViewBuilder content: @escaping () -> Content) {
+        self.init(
+            onRefresh: { refreshComplete in
+                Task {
+                    await action()
+                    refreshComplete()
+                }
+            },
+            progress: progress,
+            content: content)
+    }
+}
 
+public struct RefreshableCompat<Progress>: ViewModifier where Progress: View {
+    private let onRefresh: OnRefresh
+    private let progress: RefreshProgressBuilder<Progress>
+    
+    public init(onRefresh: @escaping OnRefresh,
+                @ViewBuilder progress: @escaping RefreshProgressBuilder<Progress>) {
+        self.onRefresh = onRefresh
+        self.progress = progress
+    }
+    
+    public func body(content: Content) -> some View {
+        RefreshableScrollView(onRefresh: onRefresh, progress: progress) {
+            content
+        }
+    }
+}
+
+public extension List {
+    @ViewBuilder func refreshableCompat<Progress: View>(onRefresh: @escaping OnRefresh,
+                                                        @ViewBuilder progress: @escaping RefreshProgressBuilder<Progress>) -> some View {
+        if #available(iOS 15.0, macOS 12.0, *) {
+            self.refreshable {
+                await withCheckedContinuation { cont in
+                    onRefresh {
+                        cont.resume()
+                    }
+                }
+            }
+        } else {
+            self.modifier(RefreshableCompat(onRefresh: onRefresh, progress: progress))
+        }
+    }
+}
+
+public extension View {
+    @ViewBuilder func refreshableCompat<Progress: View>(onRefresh: @escaping OnRefresh,
+                                                        @ViewBuilder progress: @escaping RefreshProgressBuilder<Progress>) -> some View {
+        self.modifier(RefreshableCompat(onRefresh: onRefresh, progress: progress))
+    }
+}
+
+struct TestView: View {
+  @State private var now = Date()
+
+  var body: some View {
+     RefreshableScrollView(onRefresh: { done in
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+          self.now = Date()
+          done()
+        }
+      }) {
+        VStack {
+          ForEach(1..<20) {
+            Text("\(Calendar.current.date(byAdding: .hour, value: $0, to: now)!)")
+               .padding(.bottom, 10)
+           }
+         }.padding()
+       }
+     }
+}
+
+struct TestViewWithCustomProgress: View {
+    @State private var now = Date()
+
+    var body: some View {
+       RefreshableScrollView(onRefresh: { done in
+          DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+            self.now = Date()
+            done()
+          }
+        },
+                             progress: { state in
+           if state == .waiting {
+               Text("Pull me down...")
+           } else if state == .primed {
+               Text("Now release!")
+           } else {
+               Text("Working...")
+           }
+       }
+       ) {
+          VStack {
+            ForEach(1..<20) {
+              Text("\(Calendar.current.date(byAdding: .hour, value: $0, to: now)!)")
+                 .padding(.bottom, 10)
+             }
+           }.padding()
+         }
+       }
+  }
+
+@available(iOS 15, *)
+struct TestViewWithAsync: View {
+  @State private var now = Date()
+
+  var body: some View {
+     RefreshableScrollView(action: {
+         await Task.sleep(3_000_000_000)
+         now = Date()
+     }, progress: { state in
+         RefreshActivityIndicator(isAnimating: state == .loading) {
+             $0.hidesWhenStopped = false
+         }
+     }) {
+        VStack {
+          ForEach(1..<20) {
+            Text("\(Calendar.current.date(byAdding: .hour, value: $0, to: now)!)")
+               .padding(.bottom, 10)
+           }
+         }.padding()
+       }
+     }
+}
+
+struct TestViewCompat: View {
+    @State private var now = Date()
+
+  var body: some View {
+      VStack {
+          ForEach(1..<20) {
+          Text("\(Calendar.current.date(byAdding: .hour, value: $0, to: now)!)")
+            .padding(.bottom, 10)
+        }
+      }
+      .refreshableCompat { done in
+          DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+            self.now = Date()
+            done()
+          }
+      } progress: { state in
+          RefreshActivityIndicator(isAnimating: state == .loading) {
+              $0.hidesWhenStopped = false
+          }
+      }
+
+   }
+}
+
+struct TestView_Previews: PreviewProvider {
+    static var previews: some View {
+        TestView()
+    }
+}
+
+struct TestViewWithCustomProgress_Previews: PreviewProvider {
+    static var previews: some View {
+        TestViewWithCustomProgress()
+    }
+}
+
+@available(iOS 15, *)
+struct TestViewWithAsync_Previews: PreviewProvider {
+    static var previews: some View {
+        TestViewWithAsync()
+    }
+}
+
+struct TestViewCompat_Previews: PreviewProvider {
+    static var previews: some View {
+        TestViewCompat()
+    }
+}
