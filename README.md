@@ -12,7 +12,7 @@ This package contains a component - `RefreshableScrollView`  - that enables this
 * Customizable progress indicator, with a default `RefreshActivityIndicator` spinner that works on any SwiftUI version.
 * Specify refresh operation and choose when it ends.
 * Support for Swift 5.5 `async` blocks.
-* Compatibility `refreshCompat` modifier to deliver uniform behaviour across all SwiftUI versions.
+* Compatibility `refreshCompat` modifier to deliver a drop-in replacement for iOS 15 `refreshable`. 
 
 ## Installation
 

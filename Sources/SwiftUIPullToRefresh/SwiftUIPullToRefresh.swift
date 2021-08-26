@@ -180,6 +180,7 @@ public struct RefreshActivityIndicator: UIViewRepresentable {
   }
 }
 
+#if compiler(>=5.5)
 // Allows using RefreshableScrollView with an async block.
 @available(iOS 15.0, *)
 public extension RefreshableScrollView {
@@ -197,6 +198,7 @@ public extension RefreshableScrollView {
             content: content)
     }
 }
+#endif
 
 public struct RefreshableCompat<Progress>: ViewModifier where Progress: View {
     private let onRefresh: OnRefresh
@@ -215,6 +217,8 @@ public struct RefreshableCompat<Progress>: ViewModifier where Progress: View {
     }
 }
 
+#if compiler(>=5.5)
+@available(iOS 15.0, *)
 public extension List {
     @ViewBuilder func refreshableCompat<Progress: View>(onRefresh: @escaping OnRefresh,
                                                         @ViewBuilder progress: @escaping RefreshProgressBuilder<Progress>) -> some View {
@@ -231,6 +235,7 @@ public extension List {
         }
     }
 }
+#endif
 
 public extension View {
     @ViewBuilder func refreshableCompat<Progress: View>(onRefresh: @escaping OnRefresh,
@@ -289,6 +294,7 @@ struct TestViewWithCustomProgress: View {
        }
   }
 
+#if compiler(>=5.5)
 @available(iOS 15, *)
 struct TestViewWithAsync: View {
   @State private var now = Date()
@@ -311,6 +317,7 @@ struct TestViewWithAsync: View {
        }
      }
 }
+#endif
 
 struct TestViewCompat: View {
     @State private var now = Date()
@@ -348,6 +355,7 @@ struct TestViewWithCustomProgress_Previews: PreviewProvider {
     }
 }
 
+#if compiler(>=5.5)
 @available(iOS 15, *)
 struct TestViewWithAsync_Previews: PreviewProvider {
     static var previews: some View {
@@ -360,3 +368,4 @@ struct TestViewCompat_Previews: PreviewProvider {
         TestViewCompat()
     }
 }
+#endif
