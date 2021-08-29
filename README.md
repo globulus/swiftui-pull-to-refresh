@@ -122,3 +122,8 @@ progress: { state in // HERE
 
 Check out [this recipe](https://swiftuirecipes.com/blog/pull-to-refresh-with-swiftui-scrollview) for in-depth description of the component and its code. Check out [SwiftUIRecipes.com](https://swiftuirecipes.com) for more **SwiftUI recipes**!
 
+## Changelog
+
+* 1.1.1 - Added `showsIndicators` to allow for showing/hiding `ScrollView` indicators.
+* 1.1.0 - Added ability to specify custom progress view, iOS 15 support, async block support and compatibility mode.
+* 1.0.0 - Initial release.

@@ -64,6 +64,7 @@ public enum RefreshState {
 public typealias RefreshProgressBuilder<Progress: View> = (RefreshState) -> Progress
 
 public struct RefreshableScrollView<Progress, Content>: View where Progress: View, Content: View {
+  let showsIndicators: Bool // if the ScrollView should show indicators
   let onRefresh: OnRefresh // the refreshing action
   let progress: RefreshProgressBuilder<Progress> // custom progress view
   let content: () -> Content // the ScrollView content
@@ -71,9 +72,11 @@ public struct RefreshableScrollView<Progress, Content>: View where Progress: Vie
   @State private var state = RefreshState.waiting // the current state
 
   // We use a custom constructor to allow for usage of a @ViewBuilder for the content
-  public init(onRefresh: @escaping OnRefresh,
+  public init(showsIndicators: Bool = true,
+              onRefresh: @escaping OnRefresh,
               @ViewBuilder progress: @escaping RefreshProgressBuilder<Progress>,
               @ViewBuilder content: @escaping () -> Content) {
+    self.showsIndicators = showsIndicators
     self.onRefresh = onRefresh
     self.progress = progress
     self.content = content
@@ -81,7 +84,7 @@ public struct RefreshableScrollView<Progress, Content>: View where Progress: Vie
 
   public var body: some View {
     // The root view is a regular ScrollView
-    ScrollView {
+    ScrollView(showsIndicators: showsIndicators) {
       // The ZStack allows us to position the PositionIndicator,
       // the content and the loading view, all on top of each other.
       ZStack(alignment: .top) {
@@ -145,9 +148,11 @@ public struct RefreshableScrollView<Progress, Content>: View where Progress: Vie
 // Extension that uses default RefreshActivityIndicator so that you don't have to
 // specify it every time.
 public extension RefreshableScrollView where Progress == RefreshActivityIndicator {
-    init(onRefresh: @escaping OnRefresh,
+    init(showsIndicators: Bool = true,
+         onRefresh: @escaping OnRefresh,
          @ViewBuilder content: @escaping () -> Content) {
-        self.init(onRefresh: onRefresh,
+        self.init(showsIndicators: showsIndicators,
+                  onRefresh: onRefresh,
                   progress: { state in
                     RefreshActivityIndicator(isAnimating: state == .loading) {
                         $0.hidesWhenStopped = false
@@ -184,34 +189,40 @@ public struct RefreshActivityIndicator: UIViewRepresentable {
 // Allows using RefreshableScrollView with an async block.
 @available(iOS 15.0, *)
 public extension RefreshableScrollView {
-    init(action: @escaping @Sendable () async -> Void,
+    init(showsIndicators: Bool = true,
+         action: @escaping @Sendable () async -> Void,
          @ViewBuilder progress: @escaping RefreshProgressBuilder<Progress>,
          @ViewBuilder content: @escaping () -> Content) {
-        self.init(
-            onRefresh: { refreshComplete in
-                Task {
-                    await action()
-                    refreshComplete()
-                }
-            },
-            progress: progress,
-            content: content)
+        self.init(showsIndicators: showsIndicators,
+                  onRefresh: { refreshComplete in
+                    Task {
+                        await action()
+                        refreshComplete()
+                    }
+                },
+                  progress: progress,
+                  content: content)
     }
 }
 #endif
 
 public struct RefreshableCompat<Progress>: ViewModifier where Progress: View {
+    private let showsIndicators: Bool
     private let onRefresh: OnRefresh
     private let progress: RefreshProgressBuilder<Progress>
     
-    public init(onRefresh: @escaping OnRefresh,
+    public init(showsIndicators: Bool = true,
+                onRefresh: @escaping OnRefresh,
                 @ViewBuilder progress: @escaping RefreshProgressBuilder<Progress>) {
+        self.showsIndicators = showsIndicators
         self.onRefresh = onRefresh
         self.progress = progress
     }
     
     public func body(content: Content) -> some View {
-        RefreshableScrollView(onRefresh: onRefresh, progress: progress) {
+        RefreshableScrollView(showsIndicators: showsIndicators,
+                              onRefresh: onRefresh,
+                              progress: progress) {
             content
         }
     }
@@ -220,7 +231,8 @@ public struct RefreshableCompat<Progress>: ViewModifier where Progress: View {
 #if compiler(>=5.5)
 @available(iOS 15.0, *)
 public extension List {
-    @ViewBuilder func refreshableCompat<Progress: View>(onRefresh: @escaping OnRefresh,
+    @ViewBuilder func refreshableCompat<Progress: View>(showsIndicators: Bool = true,
+                                                        onRefresh: @escaping OnRefresh,
                                                         @ViewBuilder progress: @escaping RefreshProgressBuilder<Progress>) -> some View {
         if #available(iOS 15.0, macOS 12.0, *) {
             self.refreshable {
@@ -231,16 +243,17 @@ public extension List {
                 }
             }
         } else {
-            self.modifier(RefreshableCompat(onRefresh: onRefresh, progress: progress))
+            self.modifier(RefreshableCompat(showsIndicators: showsIndicators, onRefresh: onRefresh, progress: progress))
         }
     }
 }
 #endif
 
 public extension View {
-    @ViewBuilder func refreshableCompat<Progress: View>(onRefresh: @escaping OnRefresh,
+    @ViewBuilder func refreshableCompat<Progress: View>(showsIndicators: Bool = true,
+                                                        onRefresh: @escaping OnRefresh,
                                                         @ViewBuilder progress: @escaping RefreshProgressBuilder<Progress>) -> some View {
-        self.modifier(RefreshableCompat(onRefresh: onRefresh, progress: progress))
+        self.modifier(RefreshableCompat(showsIndicators: showsIndicators, onRefresh: onRefresh, progress: progress))
     }
 }
 
@@ -329,16 +342,17 @@ struct TestViewCompat: View {
             .padding(.bottom, 10)
         }
       }
-      .refreshableCompat { done in
+      .refreshableCompat(showsIndicators: false,
+                         onRefresh: { done in
           DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
             self.now = Date()
             done()
           }
-      } progress: { state in
+      }, progress: { state in
           RefreshActivityIndicator(isAnimating: state == .loading) {
               $0.hidesWhenStopped = false
           }
-      }
+      })
 
    }
 }
@@ -362,10 +376,10 @@ struct TestViewWithAsync_Previews: PreviewProvider {
         TestViewWithAsync()
     }
 }
+#endif
 
 struct TestViewCompat_Previews: PreviewProvider {
     static var previews: some View {
         TestViewCompat()
     }
 }
-#endif
