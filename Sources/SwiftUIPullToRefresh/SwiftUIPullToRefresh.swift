@@ -103,7 +103,7 @@ public struct RefreshableScrollView<Progress, Content>: View where Progress: Vie
           // The loading view. It's offset to the top of the content unless we're loading.
           ZStack {
             Rectangle()
-              .foregroundColor(.white)
+              .foregroundColor(Color(UIColor.systemBackground))
               .frame(height: THRESHOLD)
             progress(state)
           }.offset(y: (state == .loading) ? 0 : -THRESHOLD)
