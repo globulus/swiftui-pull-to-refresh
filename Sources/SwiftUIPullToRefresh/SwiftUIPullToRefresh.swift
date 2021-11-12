@@ -47,9 +47,9 @@ public typealias RefreshComplete = () -> Void
 // once it's done refreshing.
 public typealias OnRefresh = (@escaping RefreshComplete) -> Void
 
-// The offset threshold. 66 is a good number, but you can play
+// The offset threshold. 68 is a good number, but you can play
 // with it to your liking.
-private let THRESHOLD: CGFloat = 66
+private let THRESHOLD: CGFloat = 68
 
 // Tracks the state of the RefreshableScrollView - it's either:
 // 1. waiting for a scroll to happen
