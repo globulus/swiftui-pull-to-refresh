@@ -128,7 +128,7 @@ public struct RefreshableScrollView<Progress, Content>: View where Progress: Vie
             // If the user pulled down below the threshold, prime the view
             if offset > THRESHOLD && state == .waiting {
               state = .primed
-              self.generator.notificationOccurred(.medium)
+              self.generator.notificationOccurred(.success)
 
             // If the view is primed and we've crossed the threshold again on the
             // way back, trigger the refresh
