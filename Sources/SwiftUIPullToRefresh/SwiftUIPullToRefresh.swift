@@ -47,9 +47,9 @@ public typealias RefreshComplete = () -> Void
 // once it's done refreshing.
 public typealias OnRefresh = (@escaping RefreshComplete) -> Void
 
-// The offset threshold. 60 is a good number, but you can play
+// The offset threshold. 68 is a good number, but you can play
 // with it to your liking.
-private let THRESHOLD: CGFloat = 60
+private let THRESHOLD: CGFloat = 68
 
 // Tracks the state of the RefreshableScrollView - it's either:
 // 1. waiting for a scroll to happen
@@ -70,6 +70,8 @@ public struct RefreshableScrollView<Progress, Content>: View where Progress: Vie
   let content: () -> Content // the ScrollView content
 
   @State private var state = RefreshState.waiting // the current state
+    
+  let feedbackGenerator = UINotificationFeedbackGenerator() // haptic feedback
 
   // We use a custom constructor to allow for usage of a @ViewBuilder for the content
   public init(showsIndicators: Bool = true,
@@ -126,6 +128,7 @@ public struct RefreshableScrollView<Progress, Content>: View where Progress: Vie
             // If the user pulled down below the threshold, prime the view
             if offset > THRESHOLD && state == .waiting {
               state = .primed
+              self.feedbackGenerator.notificationOccurred(.success)
 
             // If the view is primed and we've crossed the threshold again on the
             // way back, trigger the refresh
