@@ -124,6 +124,8 @@ Check out [this recipe](https://swiftuirecipes.com/blog/pull-to-refresh-with-swi
 
 ## Changelog
 
+* 1.1.3 - Add haptic feedback & increase offset a bit to fix indicator being visible on certain iPad Pro models.
+* 1.1.2 - Increase offset to fix UI bug occurring on iPhones without notch.
 * 1.1.1 - Added `showsIndicators` to allow for showing/hiding `ScrollView` indicators.
 * 1.1.0 - Added ability to specify custom progress view, iOS 15 support, async block support and compatibility mode.
 * 1.0.0 - Initial release.
