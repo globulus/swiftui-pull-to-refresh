@@ -12,7 +12,12 @@ This package contains a component - `RefreshableScrollView`  - that enables this
 * Customizable progress indicator, with a default `RefreshActivityIndicator` spinner that works on any SwiftUI version.
 * Specify refresh operation and choose when it ends.
 * Support for Swift 5.5 `async` blocks.
-* Compatibility `refreshCompat` modifier to deliver a drop-in replacement for iOS 15 `refreshable`. 
+* Compatibility `refreshCompat` modifier to deliver a drop-in replacement for iOS 15 `refreshable`.
+* Built-in haptic feedback, just like regular `List` with `refreshable` has.
+* Additional optional customizations:
+  + `showsIndicators` to allow for showing/hiding `ScrollView` indicators.
+  + `loadingViewBackgroundColor` to specify the background color of the progress indicator.
+  + `threshold` that indicates how much does the user how to pull before triggering refresh.
 
 ## Installation
 
@@ -124,6 +129,7 @@ Check out [this recipe](https://swiftuirecipes.com/blog/pull-to-refresh-with-swi
 
 ## Changelog
 
+* 1.1.4 - Added `threshold` and `loadingViewBackgroundColor` customizations.
 * 1.1.3 - Add haptic feedback & increase offset a bit to fix indicator being visible on certain iPad Pro models.
 * 1.1.2 - Increase offset to fix UI bug occurring on iPhones without notch.
 * 1.1.1 - Added `showsIndicators` to allow for showing/hiding `ScrollView` indicators.

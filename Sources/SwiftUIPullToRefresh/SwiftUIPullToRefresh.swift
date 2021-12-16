@@ -42,6 +42,7 @@ private struct PositionIndicator: View {
 
 // Callback that'll trigger once refreshing is done
 public typealias RefreshComplete = () -> Void
+
 // The actual refresh action that's called once refreshing starts. It has the
 // RefreshComplete callback to let the refresh action let the View know
 // once it's done refreshing.
@@ -49,7 +50,7 @@ public typealias OnRefresh = (@escaping RefreshComplete) -> Void
 
 // The offset threshold. 68 is a good number, but you can play
 // with it to your liking.
-private let THRESHOLD: CGFloat = 68
+public let defaultRefreshThreshold: CGFloat = 68
 
 // Tracks the state of the RefreshableScrollView - it's either:
 // 1. waiting for a scroll to happen
@@ -63,8 +64,13 @@ public enum RefreshState {
 // based on the current RefreshState.
 public typealias RefreshProgressBuilder<Progress: View> = (RefreshState) -> Progress
 
+// Default color of the rectangle behind the progress spinner
+public let defaultLoadingViewBackgroundColor = Color(UIColor.systemBackground)
+
 public struct RefreshableScrollView<Progress, Content>: View where Progress: View, Content: View {
   let showsIndicators: Bool // if the ScrollView should show indicators
+  let loadingViewBackgroundColor: Color
+  let threshold: CGFloat // what height do you have to pull down to trigger the refresh
   let onRefresh: OnRefresh // the refreshing action
   let progress: RefreshProgressBuilder<Progress> // custom progress view
   let content: () -> Content // the ScrollView content
@@ -75,10 +81,14 @@ public struct RefreshableScrollView<Progress, Content>: View where Progress: Vie
 
   // We use a custom constructor to allow for usage of a @ViewBuilder for the content
   public init(showsIndicators: Bool = true,
+              loadingViewBackgroundColor: Color = defaultLoadingViewBackgroundColor,
+              threshold: CGFloat = defaultRefreshThreshold,
               onRefresh: @escaping OnRefresh,
               @ViewBuilder progress: @escaping RefreshProgressBuilder<Progress>,
               @ViewBuilder content: @escaping () -> Content) {
     self.showsIndicators = showsIndicators
+    self.loadingViewBackgroundColor = loadingViewBackgroundColor
+    self.threshold = threshold
     self.onRefresh = onRefresh
     self.progress = progress
     self.content = content
@@ -99,16 +109,16 @@ public struct RefreshableScrollView<Progress, Content>: View where Progress: Vie
          // to keep it below the loading view, hence the alignmentGuide.
          content()
            .alignmentGuide(.top, computeValue: { _ in
-             (state == .loading) ? -THRESHOLD : 0
+             (state == .loading) ? -threshold : 0
             })
 
           // The loading view. It's offset to the top of the content unless we're loading.
           ZStack {
             Rectangle()
-              .foregroundColor(Color(UIColor.systemBackground))
-              .frame(height: THRESHOLD)
+              .foregroundColor(loadingViewBackgroundColor)
+              .frame(height: threshold)
             progress(state)
-          }.offset(y: (state == .loading) ? 0 : -THRESHOLD)
+          }.offset(y: (state == .loading) ? 0 : -threshold)
         }
       }
       // Put a fixed PositionIndicator in the background so that we have
@@ -126,13 +136,13 @@ public struct RefreshableScrollView<Progress, Content>: View where Progress: Vie
             let offset = movingY - fixedY
 
             // If the user pulled down below the threshold, prime the view
-            if offset > THRESHOLD && state == .waiting {
+            if offset > threshold && state == .waiting {
               state = .primed
               self.feedbackGenerator.notificationOccurred(.success)
 
             // If the view is primed and we've crossed the threshold again on the
             // way back, trigger the refresh
-            } else if offset < THRESHOLD && state == .primed {
+            } else if offset < threshold && state == .primed {
               state = .loading
               onRefresh { // trigger the refreshing callback
                 // once refreshing is done, smoothly move the loading view
@@ -152,9 +162,13 @@ public struct RefreshableScrollView<Progress, Content>: View where Progress: Vie
 // specify it every time.
 public extension RefreshableScrollView where Progress == RefreshActivityIndicator {
     init(showsIndicators: Bool = true,
+         loadingViewBackgroundColor: Color = defaultLoadingViewBackgroundColor,
+         threshold: CGFloat = defaultRefreshThreshold,
          onRefresh: @escaping OnRefresh,
          @ViewBuilder content: @escaping () -> Content) {
         self.init(showsIndicators: showsIndicators,
+                  loadingViewBackgroundColor: loadingViewBackgroundColor,
+                  threshold: threshold,
                   onRefresh: onRefresh,
                   progress: { state in
                     RefreshActivityIndicator(isAnimating: state == .loading) {
@@ -193,10 +207,14 @@ public struct RefreshActivityIndicator: UIViewRepresentable {
 @available(iOS 15.0, *)
 public extension RefreshableScrollView {
     init(showsIndicators: Bool = true,
+         loadingViewBackgroundColor: Color = defaultLoadingViewBackgroundColor,
+         threshold: CGFloat = defaultRefreshThreshold,
          action: @escaping @Sendable () async -> Void,
          @ViewBuilder progress: @escaping RefreshProgressBuilder<Progress>,
          @ViewBuilder content: @escaping () -> Content) {
         self.init(showsIndicators: showsIndicators,
+                  loadingViewBackgroundColor: loadingViewBackgroundColor,
+                  threshold: threshold,
                   onRefresh: { refreshComplete in
                     Task {
                         await action()
@@ -211,19 +229,27 @@ public extension RefreshableScrollView {
 
 public struct RefreshableCompat<Progress>: ViewModifier where Progress: View {
     private let showsIndicators: Bool
+    private let loadingViewBackgroundColor: Color
+    private let threshold: CGFloat
     private let onRefresh: OnRefresh
     private let progress: RefreshProgressBuilder<Progress>
     
     public init(showsIndicators: Bool = true,
+                loadingViewBackgroundColor: Color = defaultLoadingViewBackgroundColor,
+                threshold: CGFloat = defaultRefreshThreshold,
                 onRefresh: @escaping OnRefresh,
                 @ViewBuilder progress: @escaping RefreshProgressBuilder<Progress>) {
         self.showsIndicators = showsIndicators
+        self.loadingViewBackgroundColor = loadingViewBackgroundColor
+        self.threshold = threshold
         self.onRefresh = onRefresh
         self.progress = progress
     }
     
     public func body(content: Content) -> some View {
         RefreshableScrollView(showsIndicators: showsIndicators,
+                              loadingViewBackgroundColor: loadingViewBackgroundColor,
+                              threshold: threshold,
                               onRefresh: onRefresh,
                               progress: progress) {
             content
@@ -235,6 +261,8 @@ public struct RefreshableCompat<Progress>: ViewModifier where Progress: View {
 @available(iOS 15.0, *)
 public extension List {
     @ViewBuilder func refreshableCompat<Progress: View>(showsIndicators: Bool = true,
+                                                        loadingViewBackgroundColor: Color = defaultLoadingViewBackgroundColor,
+                                                        threshold: CGFloat = defaultRefreshThreshold,
                                                         onRefresh: @escaping OnRefresh,
                                                         @ViewBuilder progress: @escaping RefreshProgressBuilder<Progress>) -> some View {
         if #available(iOS 15.0, macOS 12.0, *) {
@@ -246,7 +274,11 @@ public extension List {
                 }
             }
         } else {
-            self.modifier(RefreshableCompat(showsIndicators: showsIndicators, onRefresh: onRefresh, progress: progress))
+            self.modifier(RefreshableCompat(showsIndicators: showsIndicators,
+                                            loadingViewBackgroundColor: loadingViewBackgroundColor,
+                                            threshold: threshold,
+                                            onRefresh: onRefresh,
+                                            progress: progress))
         }
     }
 }
@@ -254,9 +286,15 @@ public extension List {
 
 public extension View {
     @ViewBuilder func refreshableCompat<Progress: View>(showsIndicators: Bool = true,
+                                                        loadingViewBackgroundColor: Color = defaultLoadingViewBackgroundColor,
+                                                        threshold: CGFloat = defaultRefreshThreshold,
                                                         onRefresh: @escaping OnRefresh,
                                                         @ViewBuilder progress: @escaping RefreshProgressBuilder<Progress>) -> some View {
-        self.modifier(RefreshableCompat(showsIndicators: showsIndicators, onRefresh: onRefresh, progress: progress))
+        self.modifier(RefreshableCompat(showsIndicators: showsIndicators,
+                                        loadingViewBackgroundColor: loadingViewBackgroundColor,
+                                        threshold: threshold,
+                                        onRefresh: onRefresh,
+                                        progress: progress))
     }
 }
 
@@ -264,7 +302,30 @@ struct TestView: View {
   @State private var now = Date()
 
   var body: some View {
-     RefreshableScrollView(onRefresh: { done in
+    RefreshableScrollView(
+      onRefresh: { done in
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+          self.now = Date()
+          done()
+        }
+      }) {
+        VStack {
+          ForEach(1..<20) {
+            Text("\(Calendar.current.date(byAdding: .hour, value: $0, to: now)!)")
+               .padding(.bottom, 10)
+           }
+         }.padding()
+       }
+     }
+}
+
+struct TestViewWithLargerThreshold: View {
+  @State private var now = Date()
+
+  var body: some View {
+    RefreshableScrollView(
+      threshold: defaultRefreshThreshold * 3,
+      onRefresh: { done in
         DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
           self.now = Date()
           done()
@@ -363,6 +424,12 @@ struct TestViewCompat: View {
 struct TestView_Previews: PreviewProvider {
     static var previews: some View {
         TestView()
+    }
+}
+
+struct TestViewWithLargerThreshold_Previews: PreviewProvider {
+    static var previews: some View {
+        TestViewWithLargerThreshold()
     }
 }
 
