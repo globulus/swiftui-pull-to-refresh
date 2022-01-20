@@ -74,7 +74,7 @@ public struct RefreshableScrollView<Progress, Content>: View where Progress: Vie
   let onRefresh: OnRefresh // the refreshing action
   let progress: RefreshProgressBuilder<Progress> // custom progress view
   let content: () -> Content // the ScrollView content
-
+  @State private var offset: CGFloat = 0
   @State private var state = RefreshState.waiting // the current state
     
   let feedbackGenerator = UINotificationFeedbackGenerator() // haptic feedback
@@ -109,7 +109,7 @@ public struct RefreshableScrollView<Progress, Content>: View where Progress: Vie
          // to keep it below the loading view, hence the alignmentGuide.
          content()
            .alignmentGuide(.top, computeValue: { _ in
-             (state == .loading) ? -threshold : 0
+             (state == .loading) ? -threshold + offset : 0
             })
 
           // The loading view. It's offset to the top of the content unless we're loading.
@@ -118,7 +118,7 @@ public struct RefreshableScrollView<Progress, Content>: View where Progress: Vie
               .foregroundColor(loadingViewBackgroundColor)
               .frame(height: threshold)
             progress(state)
-          }.offset(y: (state == .loading) ? 0 : -threshold)
+          }.offset(y: (state == .loading) ? -offset : -threshold)
         }
       }
       // Put a fixed PositionIndicator in the background so that we have
@@ -127,13 +127,14 @@ public struct RefreshableScrollView<Progress, Content>: View where Progress: Vie
       // Once the scrolling offset changes, we want to see if there should
       // be a state change.
       .onPreferenceChange(PositionPreferenceKey.self) { values in
+        // Compute the offset between the moving and fixed PositionIndicators
+        let movingY = values.first { $0.type == .moving }?.y ?? 0
+        let fixedY = values.first { $0.type == .fixed }?.y ?? 0
+        offset = movingY - fixedY
         if state != .loading { // If we're already loading, ignore everything
           // Map the preference change action to the UI thread
           DispatchQueue.main.async {
-            // Compute the offset between the moving and fixed PositionIndicators
-            let movingY = values.first { $0.type == .moving }?.y ?? 0
-            let fixedY = values.first { $0.type == .fixed }?.y ?? 0
-            let offset = movingY - fixedY
+            
 
             // If the user pulled down below the threshold, prime the view
             if offset > threshold && state == .waiting {
