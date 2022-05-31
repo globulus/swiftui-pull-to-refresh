@@ -27,6 +27,12 @@ This component is distrubuted as a **Swift package**. Just add this URL to your 
 https://github.com/globulus/swiftui-pull-to-refresh
 ```
 
+You can also use **CocoaPods**:
+
+```ruby
+pod 'SwiftUI-Pull-To-Refresh', '~> 1.1.5'
+```
+
 ## Sample usage
 
 ### Bread & butter
