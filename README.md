@@ -30,7 +30,7 @@ https://github.com/globulus/swiftui-pull-to-refresh
 You can also use **CocoaPods**:
 
 ```ruby
-pod 'SwiftUI-Pull-To-Refresh', '~> 1.1.5'
+pod 'SwiftUI-Pull-To-Refresh', '~> 1.1.6'
 ```
 
 ## Sample usage
@@ -135,6 +135,7 @@ Check out [this recipe](https://swiftuirecipes.com/blog/pull-to-refresh-with-swi
 
 ## Changelog
 
+* 1.1.6 - Fixed issue where content wouldn't swipe up while in refresh state.
 * 1.1.5 - Added smooth animation when loading pull is released.
 * 1.1.4 - Added `threshold` and `loadingViewBackgroundColor` customizations.
 * 1.1.3 - Add haptic feedback & increase offset a bit to fix indicator being visible on certain iPad Pro models.

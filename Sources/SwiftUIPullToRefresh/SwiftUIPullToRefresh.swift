@@ -109,7 +109,7 @@ public struct RefreshableScrollView<Progress, Content>: View where Progress: Vie
          // to keep it below the loading view, hence the alignmentGuide.
          content()
            .alignmentGuide(.top, computeValue: { _ in
-             (state == .loading) ? -threshold + offset : 0
+             (state == .loading) ? -threshold + max(0, offset) : 0
             })
 
           // The loading view. It's offset to the top of the content unless we're loading.
@@ -118,7 +118,7 @@ public struct RefreshableScrollView<Progress, Content>: View where Progress: Vie
               .foregroundColor(loadingViewBackgroundColor)
               .frame(height: threshold)
             progress(state)
-          }.offset(y: (state == .loading) ? -offset : -threshold)
+          }.offset(y: (state == .loading) ? -max(0, offset) : -threshold)
         }
       }
       // Put a fixed PositionIndicator in the background so that we have
