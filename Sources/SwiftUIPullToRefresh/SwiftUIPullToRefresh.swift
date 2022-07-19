@@ -77,7 +77,8 @@ public struct RefreshableScrollView<Progress, Content>: View where Progress: Vie
   @State private var offset: CGFloat = 0
   @State private var state = RefreshState.waiting // the current state
     
-  let feedbackGenerator = UINotificationFeedbackGenerator() // haptic feedback
+    // Haptic Feedback
+    let pullReleasedFeedbackGenerator = UIImpactFeedbackGenerator(style: .light)
 
   // We use a custom constructor to allow for usage of a @ViewBuilder for the content
   public init(showsIndicators: Bool = true,
@@ -139,12 +140,12 @@ public struct RefreshableScrollView<Progress, Content>: View where Progress: Vie
             // If the user pulled down below the threshold, prime the view
             if offset > threshold && state == .waiting {
               state = .primed
-              self.feedbackGenerator.notificationOccurred(.success)
 
             // If the view is primed and we've crossed the threshold again on the
             // way back, trigger the refresh
             } else if offset < threshold && state == .primed {
               state = .loading
+              self.pullReleasedFeedbackGenerator.impactOccurred()
               onRefresh { // trigger the refreshing callback
                 // once refreshing is done, smoothly move the loading view
                 // back to the offset position
