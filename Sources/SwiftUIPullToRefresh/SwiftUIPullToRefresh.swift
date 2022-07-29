@@ -380,7 +380,7 @@ struct TestViewWithAsync: View {
 
   var body: some View {
      RefreshableScrollView(action: {
-         await Task.sleep(3_000_000_000)
+         try? await Task.sleep(nanoseconds: 3_000_000_000)
          now = Date()
      }, progress: { state in
          RefreshActivityIndicator(isAnimating: state == .loading) {
