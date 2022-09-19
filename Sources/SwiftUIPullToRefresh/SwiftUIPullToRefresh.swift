@@ -128,34 +128,33 @@ public struct RefreshableScrollView<Progress, Content>: View where Progress: Vie
       // Once the scrolling offset changes, we want to see if there should
       // be a state change.
       .onPreferenceChange(PositionPreferenceKey.self) { values in
-        // Compute the offset between the moving and fixed PositionIndicators
-        let movingY = values.first { $0.type == .moving }?.y ?? 0
-        let fixedY = values.first { $0.type == .fixed }?.y ?? 0
-        offset = movingY - fixedY
-        if state != .loading { // If we're already loading, ignore everything
-          // Map the preference change action to the UI thread
           DispatchQueue.main.async {
-            
+              // Compute the offset between the moving and fixed PositionIndicators
+              let movingY = values.first { $0.type == .moving }?.y ?? 0
+              let fixedY = values.first { $0.type == .fixed }?.y ?? 0
+              offset = movingY - fixedY
+              if state != .loading { // If we're already loading, ignore everything
+                // Map the preference change action to the UI thread
 
-            // If the user pulled down below the threshold, prime the view
-            if offset > threshold && state == .waiting {
-              state = .primed
+                  // If the user pulled down below the threshold, prime the view
+                  if offset > threshold && state == .waiting {
+                    state = .primed
 
-            // If the view is primed and we've crossed the threshold again on the
-            // way back, trigger the refresh
-            } else if offset < threshold && state == .primed {
-              state = .loading
-              self.pullReleasedFeedbackGenerator.impactOccurred()
-              onRefresh { // trigger the refreshing callback
-                // once refreshing is done, smoothly move the loading view
-                // back to the offset position
-                withAnimation {
-                  self.state = .waiting
-                }
+                  // If the view is primed and we've crossed the threshold again on the
+                  // way back, trigger the refresh
+                  } else if offset < threshold && state == .primed {
+                    state = .loading
+                    self.pullReleasedFeedbackGenerator.impactOccurred()
+                    onRefresh { // trigger the refreshing callback
+                      // once refreshing is done, smoothly move the loading view
+                      // back to the offset position
+                      withAnimation {
+                        self.state = .waiting
+                      }
+                    }
+                  }
               }
-            }
           }
-        }
       }
   }
 }
