@@ -69,6 +69,7 @@ public let defaultLoadingViewBackgroundColor = Color(UIColor.systemBackground)
 
 public struct RefreshableScrollView<Progress, Content>: View where Progress: View, Content: View {
   let showsIndicators: Bool // if the ScrollView should show indicators
+  let shouldTriggerHapticFeedback: Bool // if key actions should trigger haptic feedback
   let loadingViewBackgroundColor: Color
   let threshold: CGFloat // what height do you have to pull down to trigger the refresh
   let onRefresh: OnRefresh // the refreshing action
@@ -76,18 +77,21 @@ public struct RefreshableScrollView<Progress, Content>: View where Progress: Vie
   let content: () -> Content // the ScrollView content
   @State private var offset: CGFloat = 0
   @State private var state = RefreshState.waiting // the current state
-    
-    // Haptic Feedback
-    let pullReleasedFeedbackGenerator = UIImpactFeedbackGenerator(style: .light)
+
+  // Haptic Feedback
+  let finishedReloadingFeedbackGenerator = UIImpactFeedbackGenerator(style: .medium)
+  let primedFeedbackGenerator = UIImpactFeedbackGenerator(style: .heavy)
 
   // We use a custom constructor to allow for usage of a @ViewBuilder for the content
   public init(showsIndicators: Bool = true,
+              shouldTriggerHapticFeedback: Bool = false,
               loadingViewBackgroundColor: Color = defaultLoadingViewBackgroundColor,
               threshold: CGFloat = defaultRefreshThreshold,
               onRefresh: @escaping OnRefresh,
               @ViewBuilder progress: @escaping RefreshProgressBuilder<Progress>,
               @ViewBuilder content: @escaping () -> Content) {
     self.showsIndicators = showsIndicators
+    self.shouldTriggerHapticFeedback = shouldTriggerHapticFeedback
     self.loadingViewBackgroundColor = loadingViewBackgroundColor
     self.threshold = threshold
     self.onRefresh = onRefresh
@@ -139,17 +143,22 @@ public struct RefreshableScrollView<Progress, Content>: View where Progress: Vie
                   // If the user pulled down below the threshold, prime the view
                   if offset > threshold && state == .waiting {
                     state = .primed
+                    if shouldTriggerHapticFeedback {
+                      self.primedFeedbackGenerator.impactOccurred()
+                    }
 
                   // If the view is primed and we've crossed the threshold again on the
                   // way back, trigger the refresh
                   } else if offset < threshold && state == .primed {
                     state = .loading
-                    self.pullReleasedFeedbackGenerator.impactOccurred()
                     onRefresh { // trigger the refreshing callback
                       // once refreshing is done, smoothly move the loading view
                       // back to the offset position
                       withAnimation {
                         self.state = .waiting
+                      }
+                      if shouldTriggerHapticFeedback {
+                        self.finishedReloadingFeedbackGenerator.impactOccurred()
                       }
                     }
                   }
@@ -234,7 +243,7 @@ public struct RefreshableCompat<Progress>: ViewModifier where Progress: View {
     private let threshold: CGFloat
     private let onRefresh: OnRefresh
     private let progress: RefreshProgressBuilder<Progress>
-    
+
     public init(showsIndicators: Bool = true,
                 loadingViewBackgroundColor: Color = defaultLoadingViewBackgroundColor,
                 threshold: CGFloat = defaultRefreshThreshold,
@@ -246,7 +255,7 @@ public struct RefreshableCompat<Progress>: ViewModifier where Progress: View {
         self.onRefresh = onRefresh
         self.progress = progress
     }
-    
+
     public func body(content: Content) -> some View {
         RefreshableScrollView(showsIndicators: showsIndicators,
                               loadingViewBackgroundColor: loadingViewBackgroundColor,
