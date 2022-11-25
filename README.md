@@ -30,7 +30,7 @@ https://github.com/globulus/swiftui-pull-to-refresh
 You can also use **CocoaPods**:
 
 ```ruby
-pod 'SwiftUI-Pull-To-Refresh', '~> 1.1.8'
+pod 'SwiftUI-Pull-To-Refresh', '~> 1.1.9'
 ```
 
 ## Sample usage
@@ -135,6 +135,7 @@ Check out [this recipe](https://swiftuirecipes.com/blog/pull-to-refresh-with-swi
 
 ## Changelog
 
+* 1.1.9 - Reworked haptic feedback, added haptic feedback as optional.
 * 1.1.8 - Fixed crash when doing two pulls quickly in succession.
 * 1.1.7 - Updated haptic feedback. Increased Swift version for Podspec.
 * 1.1.6 - Fixed issue where content wouldn't swipe up while in refresh state.
