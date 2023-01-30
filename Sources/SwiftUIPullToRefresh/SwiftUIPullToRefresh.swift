@@ -275,20 +275,12 @@ public extension List {
                                                         threshold: CGFloat = defaultRefreshThreshold,
                                                         onRefresh: @escaping OnRefresh,
                                                         @ViewBuilder progress: @escaping RefreshProgressBuilder<Progress>) -> some View {
-        if #available(iOS 15.0, macOS 12.0, *) {
-            self.refreshable {
-                await withCheckedContinuation { cont in
-                    onRefresh {
-                        cont.resume()
-                    }
+        self.refreshable {
+            await withCheckedContinuation { cont in
+                onRefresh {
+                    cont.resume()
                 }
             }
-        } else {
-            self.modifier(RefreshableCompat(showsIndicators: showsIndicators,
-                                            loadingViewBackgroundColor: loadingViewBackgroundColor,
-                                            threshold: threshold,
-                                            onRefresh: onRefresh,
-                                            progress: progress))
         }
     }
 }
