@@ -29,14 +29,24 @@ private struct PositionPreferenceKey: PreferenceKey {
 
 private struct PositionIndicator: View {
   let type: PositionType
+  let inverted: Bool
+
+  init(type: PositionType, inverted: Bool = false) {
+    self.type = type
+    self.inverted = inverted
+  }
 
   var body: some View {
     GeometryReader { proxy in
         // the View itself is an invisible Shape that fills as much as possible
         Color.clear
           // Compute the top Y position and emit it to the Preferences queue
-          .preference(key: PositionPreferenceKey.self, value: [Position(type: type, y: proxy.frame(in: .global).minY)])
+          .preference(key: PositionPreferenceKey.self, value: [Position(type: type, y: yPosition(for: proxy))])
      }
+  }
+
+  func yPosition(for proxy: GeometryProxy) -> CGFloat {
+    return inverted ? proxy.frame(in: .global).maxY : proxy.frame(in: .global).minY
   }
 }
 
@@ -69,6 +79,7 @@ public let defaultLoadingViewBackgroundColor = Color(UIColor.systemBackground)
 
 public struct RefreshableScrollView<Progress, Content>: View where Progress: View, Content: View {
   let showsIndicators: Bool // if the ScrollView should show indicators
+  let inverted: Bool // if the ScrollView is inverted
   let shouldTriggerHapticFeedback: Bool // if key actions should trigger haptic feedback
   let loadingViewBackgroundColor: Color
   let threshold: CGFloat // what height do you have to pull down to trigger the refresh
@@ -84,6 +95,7 @@ public struct RefreshableScrollView<Progress, Content>: View where Progress: Vie
 
   // We use a custom constructor to allow for usage of a @ViewBuilder for the content
   public init(showsIndicators: Bool = true,
+              inverted: Bool = false,
               shouldTriggerHapticFeedback: Bool = false,
               loadingViewBackgroundColor: Color = defaultLoadingViewBackgroundColor,
               threshold: CGFloat = defaultRefreshThreshold,
@@ -91,6 +103,7 @@ public struct RefreshableScrollView<Progress, Content>: View where Progress: Vie
               @ViewBuilder progress: @escaping RefreshProgressBuilder<Progress>,
               @ViewBuilder content: @escaping () -> Content) {
     self.showsIndicators = showsIndicators
+    self.inverted = inverted
     self.shouldTriggerHapticFeedback = shouldTriggerHapticFeedback
     self.loadingViewBackgroundColor = loadingViewBackgroundColor
     self.threshold = threshold
@@ -107,7 +120,7 @@ public struct RefreshableScrollView<Progress, Content>: View where Progress: Vie
       ZStack(alignment: .top) {
         // The moving positioning indicator, that sits at the top
         // of the ScrollView and scrolls down with the content
-        PositionIndicator(type: .moving)
+        PositionIndicator(type: .moving, inverted: inverted)
           .frame(height: 0)
 
          // Your ScrollView content. If we're loading, we want
@@ -128,7 +141,7 @@ public struct RefreshableScrollView<Progress, Content>: View where Progress: Vie
       }
       // Put a fixed PositionIndicator in the background so that we have
       // a reference point to compute the scroll offset.
-      .background(PositionIndicator(type: .fixed))
+    .background(PositionIndicator(type: .fixed, inverted: inverted))
       // Once the scrolling offset changes, we want to see if there should
       // be a state change.
       .onPreferenceChange(PositionPreferenceKey.self) { values in
@@ -172,11 +185,13 @@ public struct RefreshableScrollView<Progress, Content>: View where Progress: Vie
 // specify it every time.
 public extension RefreshableScrollView where Progress == RefreshActivityIndicator {
     init(showsIndicators: Bool = true,
+         inverted: Bool = false,
          loadingViewBackgroundColor: Color = defaultLoadingViewBackgroundColor,
          threshold: CGFloat = defaultRefreshThreshold,
          onRefresh: @escaping OnRefresh,
          @ViewBuilder content: @escaping () -> Content) {
         self.init(showsIndicators: showsIndicators,
+                  inverted: inverted,
                   loadingViewBackgroundColor: loadingViewBackgroundColor,
                   threshold: threshold,
                   onRefresh: onRefresh,
@@ -217,12 +232,14 @@ public struct RefreshActivityIndicator: UIViewRepresentable {
 @available(iOS 15.0, *)
 public extension RefreshableScrollView {
     init(showsIndicators: Bool = true,
+         inverted: Bool = false,
          loadingViewBackgroundColor: Color = defaultLoadingViewBackgroundColor,
          threshold: CGFloat = defaultRefreshThreshold,
          action: @escaping @Sendable () async -> Void,
          @ViewBuilder progress: @escaping RefreshProgressBuilder<Progress>,
          @ViewBuilder content: @escaping () -> Content) {
         self.init(showsIndicators: showsIndicators,
+                  inverted: inverted,
                   loadingViewBackgroundColor: loadingViewBackgroundColor,
                   threshold: threshold,
                   onRefresh: { refreshComplete in
@@ -239,17 +256,20 @@ public extension RefreshableScrollView {
 
 public struct RefreshableCompat<Progress>: ViewModifier where Progress: View {
     private let showsIndicators: Bool
+    private let inverted: Bool
     private let loadingViewBackgroundColor: Color
     private let threshold: CGFloat
     private let onRefresh: OnRefresh
     private let progress: RefreshProgressBuilder<Progress>
 
     public init(showsIndicators: Bool = true,
+                inverted: Bool = false,
                 loadingViewBackgroundColor: Color = defaultLoadingViewBackgroundColor,
                 threshold: CGFloat = defaultRefreshThreshold,
                 onRefresh: @escaping OnRefresh,
                 @ViewBuilder progress: @escaping RefreshProgressBuilder<Progress>) {
         self.showsIndicators = showsIndicators
+        self.inverted = inverted
         self.loadingViewBackgroundColor = loadingViewBackgroundColor
         self.threshold = threshold
         self.onRefresh = onRefresh
@@ -271,6 +291,7 @@ public struct RefreshableCompat<Progress>: ViewModifier where Progress: View {
 @available(iOS 15.0, *)
 public extension List {
     @ViewBuilder func refreshableCompat<Progress: View>(showsIndicators: Bool = true,
+                                                        inverted: Bool = false,
                                                         loadingViewBackgroundColor: Color = defaultLoadingViewBackgroundColor,
                                                         threshold: CGFloat = defaultRefreshThreshold,
                                                         onRefresh: @escaping OnRefresh,
@@ -285,6 +306,7 @@ public extension List {
             }
         } else {
             self.modifier(RefreshableCompat(showsIndicators: showsIndicators,
+                                            inverted: inverted,
                                             loadingViewBackgroundColor: loadingViewBackgroundColor,
                                             threshold: threshold,
                                             onRefresh: onRefresh,
@@ -296,11 +318,13 @@ public extension List {
 
 public extension View {
     @ViewBuilder func refreshableCompat<Progress: View>(showsIndicators: Bool = true,
+                                                        inverted: Bool = false,
                                                         loadingViewBackgroundColor: Color = defaultLoadingViewBackgroundColor,
                                                         threshold: CGFloat = defaultRefreshThreshold,
                                                         onRefresh: @escaping OnRefresh,
                                                         @ViewBuilder progress: @escaping RefreshProgressBuilder<Progress>) -> some View {
         self.modifier(RefreshableCompat(showsIndicators: showsIndicators,
+                                        inverted: inverted,
                                         loadingViewBackgroundColor: loadingViewBackgroundColor,
                                         threshold: threshold,
                                         onRefresh: onRefresh,
@@ -381,6 +405,33 @@ struct TestViewWithCustomProgress: View {
        }
   }
 
+struct TestViewWithInverted: View {
+  @State private var now = Date()
+
+  var body: some View {
+      RefreshableScrollView(
+        inverted: true,
+        onRefresh: { done in
+          DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+            self.now = Date()
+            done()
+          }
+        }
+      ) {
+          VStack {
+            ForEach(1..<20) {
+              Text("\(Calendar.current.date(byAdding: .hour, value: $0, to: now)!)")
+                 .padding(.bottom, 10)
+                 .rotationEffect(.radians(.pi))
+                 .scaleEffect(x: -1, y: 1, anchor: .center)
+             }
+           }.padding()
+         }
+      .rotationEffect(.radians(.pi))
+      .scaleEffect(x: -1, y: 1, anchor: .center)
+  }
+}
+
 #if compiler(>=5.5)
 @available(iOS 15, *)
 struct TestViewWithAsync: View {
@@ -446,6 +497,12 @@ struct TestViewWithLargerThreshold_Previews: PreviewProvider {
 struct TestViewWithCustomProgress_Previews: PreviewProvider {
     static var previews: some View {
         TestViewWithCustomProgress()
+    }
+}
+
+struct TestViewWithInverted_Previews: PreviewProvider {
+    static var previews: some View {
+        TestViewWithInverted()
     }
 }
 
