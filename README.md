@@ -135,6 +135,7 @@ Check out [this recipe](https://swiftuirecipes.com/blog/pull-to-refresh-with-swi
 
 ## Changelog
 
+* 1.1.10 - Added `inverted`to allow using the usage with an inverted `ScrollView`
 * 1.1.9 - Reworked haptic feedback, added haptic feedback as optional.
 * 1.1.8 - Fixed crash when doing two pulls quickly in succession.
 * 1.1.7 - Updated haptic feedback. Increased Swift version for Podspec.
